@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BachatApp Prototype - Pan-India Price Saver</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f7f6; color: #333; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        h1 { color: #2ecc71; margin-bottom: 5px; font-size: 28px; }
+        p.subtitle { color: #7f8c8d; margin-bottom: 20px; font-size: 14px; }
+        
+        /* Category Filters Styling */
+        .filter-container { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-btn { background: #edf2f7; border: none; padding: 8px 16px; font-size: 14px; border-radius: 20px; cursor: pointer; font-weight: 600; color: #4a5568; transition: all 0.2s; }
+        .filter-btn:hover { background: #e2e8f0; }
+        .filter-btn.active { background: #2ecc71; color: white; }
+
+        .search-container { position: relative; width: 100%; }
+        .search-box { width: 100%; padding: 14px 15px; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 16px; margin-bottom: 15px; outline: none; transition: border 0.3s; }
+        .search-box:focus { border-color: #2ecc71; }
+        .search-btn { width: 100%; background-color: #2ecc71; color: white; border: none; padding: 14px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .search-btn:hover { background-color: #27ae60; }
+        
+        .result-card { margin-top: 25px; padding: 20px; border-radius: 8px; text-align: left; display: none; border-left: 5px solid #2ecc71; background: #f9f9f9; }
+        .result-title { font-weight: bold; color: #2c3e50; font-size: 18px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .meta-line { font-size: 14px; color: #555; margin-bottom: 6px; }
+        .price-line { margin: 12px 0 6px 0; font-size: 16px; }
+        .price-tag { color: #e74c3c; font-weight: bold; }
+        .gen-price-tag { color: #2ecc71; font-weight: bold; font-size: 18px; }
+        .savings-tag { color: #27ae60; font-weight: bold; background: #e8f8f0; padding: 4px 8px; border-radius: 4px; font-size: 14px; display: inline-block; margin-top: 10px; }
+        
+        /* History Logger Box */
+        .logger-container { margin-top: 25px; padding: 15px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffeeba; text-align: left; display: none; }
+        .logger-title { font-weight: bold; color: #856404; font-size: 14px; margin-bottom: 5px; }
+        .logger-list { font-size: 13px; color: #533f03; padding-left: 20px; }
+
+        .info-footer { font-size: 11px; color: #95a5a6; margin-top: 20px; text-align: center; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Sky Medicine Comparison</h1>
+    <p class="subtitle">Prototype V1: Pan-India Private vs. Generic Medicine Search</p>
+    
+    <!-- Custom Filter Tabs Component -->
+    <div class="filter-container">
+        <button class="filter-btn active" onclick="filterCategory('all', this)">All Medicines</button>
+        <button class="filter-btn" onclick="filterCategory('painkiller', this)">Painkillers</button>
+        <button class="filter-btn" onclick="filterCategory('antibiotic', this)">Antibiotics</button>
+        <button class="filter-btn" onclick="filterCategory('chronic', this)">Chronic Care</button>
+    </div>
+
+    <!-- Search input layer -->
+    <div class="search-container">
+        <input type="text" id="productInput" class="search-box" placeholder="Type a brand (e.g., Zerodol P, Calpol 500, Augmentin)..." onkeypress="handleKeyPress(event)">
+        <button class="search-btn" onclick="findAlternative()">Compare Prices Instantly</button>
+    </div>
+
+    <!-- Main Output Display Card -->
+    <div id="resultCard" class="result-card">
+        <div class="result-title" id="searchedBrand">Searched Brand</div>
+        <div class="meta-line"><strong>Category Group:</strong> <span id="medCategory" style="text-transform: capitalize; font-weight: bold; color: #3182ce;">-</span></div>
+        <div class="meta-line"><strong>Generic Base Composition:</strong> <span id="genComposition">-</span></div>
+        <div class="meta-line"><strong>Pack Size/Unit:</strong> <span id="unitSize">-</span></div>
+        <div class="price-line"><strong>Estimated Private Brand Price:</strong> <span id="origPrice" class="price-tag">₹0</span></div>
+        <div class="price-line"><strong>Govt. Generic Option Price:</strong> <span id="altPrice" class="gen-price-tag">₹0</span></div>
+        <span id="savings" class="savings-tag">Saves 0%</span>
+    </div>
+
+    <!-- Prototype Missing Brand Request Logger Component -->
+    <div id="loggerBox" class="logger-container">
+        <div class="logger-title">⚠️ Missed Brand Database Log (For Admin Tracking)</div>
+        <p style="font-size:12px; margin-bottom:5px; color:#666;">The following missing queries were recorded locally for dataset improvements:</p>
+        <ul id="loggerList" class="logger-list"></ul>
+    </div>
+
+    <div class="info-footer">
+        Available across India at Central Pharmacy Hubs (like Govind Mitra Road in Patna, Bhagirath Palace in Delhi) and Pradhan Mantri Bhartiya Janaushadhi Kendras.
+    </div>
+</div>
+
+<script>
+    let activeCategoryFilter = "all";
+    const loggedMissingBrands = new Set();
+
+    // COMPREHENSIVE MAPPED DATASET WITH FILTER CODES
+    const productDatabase = {
+        // --- Painkillers / Analgesics ---
+        "zerodol p": { genName: "Aceclofenac 100mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 68, genPrice: 10.00, cat: "painkiller" },
+        "aceclo plus": { genName: "Aceclofenac 100mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 65, genPrice: 10.00, cat: "painkiller" },
+        "hifenac p": { genName: "Aceclofenac 100mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 72, genPrice: 10.00, cat: "painkiller" },
+        "hifenac": { genName: "Aceclofenac Tablets IP 100 mg", unit: "10's", origPrice: 48, genPrice: 8.00, cat: "painkiller" },
+        "zerodol": { genName: "Aceclofenac Tablets IP 100 mg", unit: "10's", origPrice: 51, genPrice: 8.00, cat: "painkiller" },
+        "ecosprin 150": { genName: "Aspirin Gastro-resistant Tablets IP 150 mg", unit: "14's", origPrice: 11, genPrice: 5.00, cat: "painkiller" },
+        "myospaz forte": { genName: "Chlorzoxazone 500mg, Diclofenac 50mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 154, genPrice: 25.00, cat: "painkiller" },
+        "reactin plus": { genName: "Chlorzoxazone 500mg, Diclofenac 50mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 135, genPrice: 25.00, cat: "painkiller" },
+        "volini gel": { genName: "Diclofenac Gel IP 1.16%w/w (Diclofenac Diethylamine)", unit: "15 g", origPrice: 145, genPrice: 12.00, cat: "painkiller" },
+        "voveran gel": { genName: "Diclofenac Gel IP 1.16%w/w (Diclofenac Diethylamine)", unit: "15 g", origPrice: 130, genPrice: 12.00, cat: "painkiller" },
+        "omni gel": { genName: "Diclofenac Gel IP 1.16%w/w (Diclofenac Diethylamine)", unit: "15 g", origPrice: 125, genPrice: 12.00, cat: "painkiller" },
+        "voveran sr 100": { genName: "Diclofenac Sodium Prolonged Release Tablets IP 100 mg", unit: "10's", origPrice: 96, genPrice: 12.10, cat: "painkiller" },
+        "dynapar aq": { genName: "Diclofenac Sodium Injection IP 25mg per ml", unit: "3 ml", origPrice: 35, genPrice: 4.00, cat: "painkiller" },
+        "voveran 50": { genName: "Diclofenac Gastro-Resistant Tablets IP 50 mg", unit: "10's", origPrice: 42, genPrice: 5.50, cat: "painkiller" },
+        "etoshine 120": { genName: "Etoricoxib Tablets IP 120 mg", unit: "10's", origPrice: 198, genPrice: 38.00, cat: "painkiller" },
+        "nucoxia 120": { genName: "Etoricoxib Tablets IP 120 mg", unit: "10's", origPrice: 210, genPrice: 38.00, cat: "painkiller" },
+        "etoshine 90": { genName: "Etoricoxib Tablets IP 90 mg", unit: "10's", origPrice: 165, genPrice: 31.00, cat: "painkiller" },
+        "nucoxia 90": { genName: "Etoricoxib Tablets IP 90 mg", unit: "10's", origPrice: 172, genPrice: 31.00, cat: "painkiller" },
+        "combiflam": { genName: "Ibuprofen 400mg and Paracetamol 325mg Tablets IP", unit: "10's", origPrice: 38, genPrice: 8.00, cat: "painkiller" },
+        "flexon": { genName: "Ibuprofen 400mg and Paracetamol 325mg Tablets IP", unit: "10's", origPrice: 34, genPrice: 8.00, cat: "painkiller" },
+        "brufen 200": { genName: "Ibuprofen Tablets IP 200 mg", unit: "10's", origPrice: 18, genPrice: 3.00, cat: "painkiller" },
+        "brufen 400": { genName: "Ibuprofen Tablets IP 400 mg", unit: "15's", origPrice: 32, genPrice: 8.80, cat: "painkiller" },
+        "nise p": { genName: "Nimesulide 100mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 94, genPrice: 11.00, cat: "painkiller" },
+        "sumo": { genName: "Nimesulide 100mg and Paracetamol 325mg Tablets", unit: "10's", origPrice: 88, genPrice: 11.00, cat: "painkiller" },
+        "nise": { genName: "Nimesulide Tablets 100 mg", unit: "10's", origPrice: 75, genPrice: 6.60, cat: "painkiller" },
+        "voveran plus": { genName: "Diclofenac Sodium 50mg and Paracetamol 325mg Tablets IP", unit: "10's", origPrice: 68, genPrice: 9.90, cat: "painkiller" },
+        "calpol susp": { genName: "Paracetamol Paediatric Oral Suspension IP 125 mg per 5 ml", unit: "60 ml", origPrice: 42, genPrice: 11.00, cat: "painkiller" },
+ "crocin susp": {
+        genName: "Paracetamol Paediatric Oral Suspension IP 125 mg per 5 ml",
+        unit: "60 ml",
+        origPrice: 40,
+        genPrice: 11.00,
+        cat: "painkiller"
+    },
+
+    "crocin 500": {
+        genName: "Paracetamol Tablets IP 500 mg",
+        unit: "10's",
+        origPrice: 18,
+        genPrice: 7.00,
+        cat: "painkiller"
+    },
+
+    "calpol 500": {
+        genName: "Paracetamol Tablets IP 500 mg",
+        unit: "10's",
+        origPrice: 16,
+        genPrice: 7.00,
+        cat: "painkiller"
+    },
+
+    "dolo 500": {
+        genName: "Paracetamol Tablets IP 500 mg",
+        unit: "10's",
+        origPrice: 17,
+        genPrice: 7.00,
+        cat: "painkiller"
+    },
+
+    "fortwin": {
+        genName: "Pentazocine Injection IP 30 mg per ml",
+        unit: "1 ml",
+        origPrice: 48,
+        genPrice: 15.00,
+        cat: "painkiller"
+    },
+
+    "serra 10": {
+        genName: "Serratiopeptidase Tablets IP 10 mg",
+        unit: "10's",
+        origPrice: 68,
+        genPrice: 12.10,
+        cat: "painkiller"
+    },
+
+    "ultram": {
+        genName: "Tramadol Hydrochloride Injection 100 mg per 2 ml",
+        unit: "2 ml",
+        origPrice: 45,
+        genPrice: 8.00,
+        cat: "painkiller"
+    },
+
+    "supridol": {
+        genName: "Tramadol Tablets 50mg",
+        unit: "10's",
+        origPrice: 60,
+        genPrice: 8.00,
+        cat: "painkiller"
+    },
+
+    // --- Chronic Care (Neurology & Diabetes) ---
+
+    "lyrica 75": {
+        genName: "Pregabalin Capsules IP 75 mg",
+        unit: "10's",
+        origPrice: 195,
+        genPrice: 22.00,
+        cat: "chronic"
+    },
+
+    "pregaba 75": {
+        genName: "Pregabalin Capsules IP 75 mg",
+        unit: "10's",
+        origPrice: 160,
+        genPrice: 22.00,
+        cat: "chronic"
+    },
+
+    "pregalin 75": {
+        genName: "Pregabalin Capsules IP 75 mg",
+        unit: "10's",
+        origPrice: 175,
+        genPrice: 22.00,
+        cat: "chronic"
+    },
+
+    "glycomet gp 2": {
+        genName: "Metformin Hydrochloride PR 500mg and Glimepiride 2mg Tablets IP",
+        unit: "15's",
+        origPrice: 138,
+        genPrice: 26.40,
+        cat: "chronic"
+    },
+
+    "amaryl m 2g": {
+        genName: "Metformin Hydrochloride PR 500mg and Glimepiride 2mg Tablets IP",
+        unit: "15's",
+        origPrice: 185,
+        genPrice: 26.40,
+        cat: "chronic"
+    },
+
+    // --- Antibiotics & Anti-Infectives ---
+
+    "zovirax 400": {
+        genName: "Aciclovir Tablets IP 400 mg",
+        unit: "10's",
+        origPrice: 220,
+        genPrice: 44.00,
+        cat: "antibiotic"
+    },
+
+    "augmentin 1.2g": {
+        genName: "Amoxycillin 1g and Potassium Clavulanate 200mg Injection IP",
+        unit: "Vial",
+        origPrice: 165,
+        genPrice: 58.00,
+        cat: "antibiotic"
+    },
+
+    "augmentin 625 duo": {
+        genName: "Amoxycillin 500mg and Potassium Clavulanate 125mg Tablets IP",
+        unit: "6's",
+        origPrice: 122,
+        genPrice: 56.10,
+        cat: "antibiotic"
+    },
+
+    "moxikind cv 625": {
+        genName: "Amoxycillin 500mg and Potassium Clavulanate 125mg Tablets IP",
+        unit: "6's",
+        origPrice: 110,
+        genPrice: 56.10,
+        cat: "antibiotic"
+    },
+
+    "mox 500": {
+        genName: "Amoxycillin Capsules IP 500mg",
+        unit: "10's",
+        origPrice: 85,
+        genPrice: 35.00,
+        cat: "antibiotic"
+    },
+
+    "azithral 500": {
+        genName: "Azithromycin Tablets IP 500 mg",
+        unit: "3's",
+        origPrice: 119,
+        genPrice: 42.00,
+        cat: "antibiotic"
+    },
+
+    "azi 500": {
+        genName: "Azithromycin Tablets IP 500 mg",
+        unit: "3's",
+        origPrice: 104,
+        genPrice: 42.00,
+        cat: "antibiotic"
+    },
+
+    "taxim o 200": {
+        genName: "Cefixime Tablets IP 200 mg",
+        unit: "10's",
+        origPrice: 145,
+        genPrice: 53.00,
+        cat: "antibiotic"
+    },
+
+    "ziprax 200": {
+        genName: "Cefixime Tablets IP 200 mg",
+        unit: "10's",
+        origPrice: 152,
+        genPrice: 53.00,
+        cat: "antibiotic"
+    },
+
+    "cepodem 200": {
+        genName: "Cefpodoxime Tablets IP 200 mg",
+        unit: "10's",
+        origPrice: 198,
+        genPrice: 70.00,
+        cat: "antibiotic"
+    },
+
+    "monocef 1g": {
+        genName: "Ceftriaxone Injection IP 1 g",
+        unit: "Vial",
+        origPrice: 65,
+        genPrice: 28.00,
+        cat: "antibiotic"
+    },
+
+    "ceftum 500": {
+        genName: "Cefuroxime Axetil Tablets IP 500 mg",
+        unit: "10's",
+        origPrice: 580,
+        genPrice: 142.00,
+        cat: "antibiotic"
+    },
+
+    "ciplox 500": {
+        genName: "Ciprofloxacin Hydrochloride Tablets IP 500 mg",
+        unit: "10's",
+        origPrice: 45,
+        genPrice: 20.00,
+        cat: "antibiotic"
+    },
+
+    "levomac 500": {
+        genName: "Levofloxacin Tablets IP 500mg",
+        unit: "10's",
+        origPrice: 94,
+        genPrice: 33.00,
+        cat: "antibiotic"
+    },
+
+    "norflox tz": {
+        genName: "Norfloxacin 400mg and Tinidazole 600mg Tablets",
+        unit: "10's",
+        origPrice: 115,
+        genPrice: 40.00,
+        cat: "antibiotic"
+    },
+
+    "zenflox oz": {
+        genName: "Ofloxacin 200mg and Ornidazole 500mg Tablets IP",
+        unit: "10's",
+        origPrice: 138,
+        genPrice: 27.50,
+        cat: "antibiotic"
+    },
+
+    "panderm cream": {
+        genName: "Clotrimazole Cream IP 1% w/w",
+        unit: "15 g",
+        origPrice: 95,
+        genPrice: 15.40,
+        cat: "antibiotic"
+    }
+
+};
+
+
+function filterCategory(category, buttonElement) {
+
+    activeCategoryFilter = category;
+
+    const buttons = document.querySelectorAll('.filter-btn');
+
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    buttonElement.classList.add('active');
+
+    const query = document
+        .getElementById("productInput")
+        .value
+        .trim();
+
+    if (query !== "") {
+        findAlternative();
+    }
+}
+
+
+function findAlternative() {
+
+    const inputField =
+        document.getElementById("productInput");
+
+    const query =
+        inputField.value.toLowerCase().trim();
+
+    const card =
+        document.getElementById("resultCard");
+
+    if (!query) return;
+
+
+    if (productDatabase[query]) {
+
+        const item = productDatabase[query];
+
+        // Check category barrier
+
+        if (
+            activeCategoryFilter !== "all" &&
+            item.cat !== activeCategoryFilter
+        ) {
+
+            document.getElementById("searchedBrand").innerText =
+                "⏳ Filter Mismatch";
+
+            document.getElementById("genComposition").innerText =
+                `This medicine belongs under the "${item.cat}" selection group. Change your active filter category to see details.`;
+
+            document.getElementById("medCategory").innerText =
+                item.cat;
+
+            document.getElementById("unitSize").innerText =
+                "N/A";
+
+            document.getElementById("origPrice").innerText =
+                "N/A";
+
+            document.getElementById("altPrice").innerText =
+                "N/A";
+
+            document.getElementById("savings").innerText =
+                "Toggle the category tabs at the top.";
+
+            document.getElementById("savings").style.background =
+                "#ebf8ff";
+
+            document.getElementById("savings").style.color =
+                "#2b6cb0";
+
+            card.style.display =
+                "block";
+
+            card.style.borderLeftColor =
+                "#3182ce";
+
+            return;
+        }
+
+
+        const styledQuery = query
+            .split(' ')
+            .map(
+                w =>
+                    w.charAt(0).toUpperCase() +
+                    w.slice(1)
+            )
+            .join(' ');
+
+
+        document.getElementById("searchedBrand").innerText =
+            "🔍 Result for: " + styledQuery;
+
+        document.getElementById("medCategory").innerText =
+            item.cat;
+
+        document.getElementById("genComposition").innerText =
+            item.genName;
+
+        document.getElementById("unitSize").innerText =
+            item.unit;
+
+        document.getElementById("origPrice").innerText =
+            "₹" + item.origPrice.toFixed(2);
+
+        document.getElementById("altPrice").innerText =
+            "₹" + item.genPrice.toFixed(2);
+
+
+        const savingsPercent = Math.round(
+            ((item.origPrice - item.genPrice) /
+                item.origPrice) * 100
+        );
+
+
+        document.getElementById("savings").innerText =
+            `💥 Saves you approx ${savingsPercent}% on this switch!`;
+
+        document.getElementById("savings").style.background =
+            "#e8f8f0";
+
+        document.getElementById("savings").style.color =
+            "#27ae60";
+
+        card.style.display =
+            "block";
+
+        card.style.borderLeftColor =
+            "#2ecc71";
+
+    } else {
+
+        // Log missing brand query local entry
+
+        logMissingBrand(query);
+
+        document.getElementById("searchedBrand").innerText =
+            "❌ Brand Not Logged Yet";
+
+        document.getElementById("medCategory").innerText =
+            "N/A";
+
+        document.getElementById("genComposition").innerText =
+            "N/A";
+
+        document.getElementById("unitSize").innerText =
+            "N/A";
+
+        document.getElementById("origPrice").innerText =
+            "N/A";
+
+        document.getElementById("altPrice").innerText =
+            "N/A";
+
+        document.getElementById("savings").innerText =
+            "Logged for database expansion. We are updating continuously.";
+
+        document.getElementById("savings").style.background =
+            "#fdedec";
+
+        document.getElementById("savings").style.color =
+            "#c0392b";
+
+        card.style.display =
+            "block";
+
+        card.style.borderLeftColor =
+            "#e74c3c";
+    }
+}
+
+
+function logMissingBrand(brandName) {
+
+    if (!loggedMissingBrands.has(brandName)) {
+
+        loggedMissingBrands.add(brandName);
+
+        const loggerBox =
+            document.getElementById("loggerBox");
+
+        const loggerList =
+            document.getElementById("loggerList");
+
+        const li =
+            document.createElement("li");
+
+        li.textContent =
+            `User searched for: "${brandName}" (Needs mapping reference)`;
+
+        loggerList.appendChild(li);
+
+        loggerBox.style.display =
+            "block";
+    }
+}
+
+
+function handleKeyPress(event) {
+
+    if (event.key === "Enter") {
+        findAlternative();
+    }
+
+}
+</script>
